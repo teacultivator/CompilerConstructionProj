@@ -1,0 +1,157 @@
+
+/* ID:  2022B3A70404P; Name: Vivek Raj Barnwal */
+/* ID:  2022B3A70607P; Name: Abhinav Madaan */
+/* ID:  2022B3A70413P; Name: Jayant Grover */
+/* ID:  2022B3A70648P; Name: Gathvik Narayan Kolla */
+/* ID:  2022B3A70474P; Name: Raghav Mundra */
+/* ID: 2023A7PS0653P; Name: Vulli Abhinav */
+
+/* Complete LL(1) Grammar */
+
+(1)  <program> → <otherFunctions> <mainFunction>
+
+(2)  <otherFunctions> → <function> <otherFunctions>  
+(3)  <otherFunctions> → ε
+
+(4)  <mainFunction> → TK_MAIN <stmts> TK_END
+
+(5)  <function> → TK_FUNID <input_par> <output_par> TK_SEM <stmts> TK_END
+
+(6)  <input_par> → TK_INPUT TK_PARAMETER TK_LIST TK_SQL <parameter_list> TK_SQR
+
+(7)  <output_par> → TK_OUTPUT TK_PARAMETER TK_LIST TK_SQL <parameter_list> TK_SQR  
+(8)  <output_par> → ε
+
+(9)  <parameter_list> → <dataType> TK_ID <remaining_list>
+
+(10) <remaining_list> → TK_COMMA <parameter_list>  
+(11) <remaining_list> → ε
+
+(12) <dataType> → <primitiveDatatype>  
+(13) <dataType> → <constructedDatatype>
+
+(14) <primitiveDatatype> → TK_INT  
+(15) <primitiveDatatype> → TK_REAL
+
+(16) <constructedDatatype> → TK_RECORD TK_RUID  
+(17) <constructedDatatype> → TK_UNION TK_RUID  
+(18) <constructedDatatype> → TK_RUID (New rule)
+
+(19) <stmts> → <typeDefinitions> <declarations> <otherStmts> <returnStmt>
+
+(20) <typeDefinitions> → <actualOrRedefined> <typeDefinitions>  
+(21) <typeDefinitions> → ε
+
+(22) <actualOrRedefined> → <typeDefinition> (new non-terminal actualOrRedefined) 
+(23) <actualOrRedefined> → <definetypestmt>
+
+(24) <typeDefinition> → TK_RECORD TK_RUID <fieldDefinitions> TK_ENDRECORD  
+(25) <typeDefinition> → TK_UNION TK_RUID <fieldDefinitions> TK_ENDUNION
+
+(26) <fieldDefinitions> → <fieldDefinition> <fieldDefinition> <moreFields>
+
+(27) <fieldDefinition> → TK_TYPE <fieldType> TK_COLON TK_FIELDID TK_SEM   (field type replaced primitive datatype and subsequent rules separted fieldtype)
+
+(28) <fieldType> → <primitiveDatatype>  
+(29) <fieldType> → <constructedDatatype>
+
+(30) <moreFields> → <fieldDefinition> <moreFields>  
+(31) <moreFields> → ε
+
+(32) <declarations> → <declaration> <declarations>  
+(33) <declarations> → ε
+
+(34) <declaration> → TK_TYPE <dataType> TK_COLON TK_ID <global_or_not> TK_SEM
+
+(35) <global_or_not> → TK_COLON TK_GLOBAL  (Change : tk_colon was not part of this before)
+(36) <global_or_not> → ε
+
+(37) <otherStmts> → <stmt> <otherStmts>  
+(38) <otherStmts> → ε
+
+(39) <stmt> → <assignmentStmt>  
+(40) <stmt> → <iterativeStmt>  
+(41) <stmt> → <conditionalStmt>  
+(42) <stmt> → <ioStmt>  
+(43) <stmt> → <funCallStmt>
+
+(44) <assignmentStmt> → <singleOrRecId> TK_ASSIGNOP <arithmeticExpression> TK_SEM
+
+(45) <singleOrRecId> → TK_ID <optionSingleConstructed> (Change : option single constructed created and expanded)
+
+(46) <optionSingleConstructed> → <oneExpansion> <moreExpansions> (new)  
+(47) <optionSingleConstructed> → ε
+
+(48) <oneExpansion> → TK_DOT TK_FIELDID
+
+(49) <moreExpansions> → <oneExpansion> <moreExpansions>  
+(50) <moreExpansions> → ε
+
+(51) <funCallStmt> → <outputParameters> TK_CALL TK_FUNID TK_WITH TK_PARAMETERS <inputParameters> TK_SEM ( Change : tk_sem added)
+
+(52) <outputParameters> → TK_SQL <idList> TK_SQR TK_ASSIGNOP  
+(53) <outputParameters> → ε
+
+(54) <inputParameters> → TK_SQL <idList> TK_SQR
+
+(55) <iterativeStmt> → TK_WHILE TK_OP <booleanExpression> TK_CL <stmt> <otherStmts> TK_ENDWHILE
+
+(56) <conditionalStmt> → TK_IF TK_OP <booleanExpression> TK_CL TK_THEN <stmt> <otherStmts> <elsePart> (change : tk_if tk_op added, non terminal else part added)
+
+(57) <elsePart> → TK_ELSE <stmt> <otherStmts> TK_ENDIF  
+(58) <elsePart> → TK_ENDIF
+
+(59) <ioStmt> → TK_READ TK_OP <var> TK_CL TK_SEM  
+(60) <ioStmt> → TK_WRITE TK_OP <var> TK_CL TK_SEM
+
+(61) <arithmeticExpression> → <term> <expPrime>
+
+(62) <expPrime> → <lowPrecedenceOperators> <term> <expPrime>  
+(63) <expPrime> → ε
+
+(64) <term> → <factor> <termPrime>
+
+(65) <termPrime> → <highPrecedenceOperators> <factor> <termPrime>  
+(66) <termPrime> → ε
+
+(67) <factor> → TK_OP <arithmeticExpression> TK_CL  
+(68) <factor> → <var>
+
+(69) <highPrecedenceOperators> → TK_MUL  
+(70) <highPrecedenceOperators> → TK_DIV
+
+(71) <lowPrecedenceOperators> → TK_PLUS  
+(72) <lowPrecedenceOperators> → TK_MINUS
+
+(73) <booleanExpression> → TK_OP <booleanExpression> TK_CL <logicalOp> TK_OP <booleanExpression> TK_CL  
+(74) <booleanExpression> → <var> <relationalOp> <var>  
+(75) <booleanExpression> → TK_NOT TK_OP <booleanExpression> TK_CL (Change : tk_op and tk_cl added around the boolean expressinon)
+
+(76) <var> → <singleOrRecId>  (new rule for var)
+(77) <var> → TK_NUM  
+(78) <var> → TK_RNUM
+
+(79) <logicalOp> → TK_AND  
+(80) <logicalOp> → TK_OR
+
+(81) <relationalOp> → TK_LT  
+(82) <relationalOp> → TK_LE  
+(83) <relationalOp> → TK_EQ  
+(84) <relationalOp> → TK_GT  
+(85) <relationalOp> → TK_GE  
+(86) <relationalOp> → TK_NE
+
+(87) <returnStmt> → TK_RETURN <optionalReturn> TK_SEM
+
+(88) <optionalReturn> → TK_SQL <idList> TK_SQR  
+(89) <optionalReturn> → ε
+
+(90) <idList> → TK_ID <more_ids>
+
+(91) <more_ids> → TK_COMMA <idList>  
+(92) <more_ids> → ε
+
+(93) <definetypestmt> → TK_DEFINETYPE <A> TK_RUID TK_AS TK_RUID
+
+(94) <A> → TK_RECORD  
+(95) <A> → TK_UNION
