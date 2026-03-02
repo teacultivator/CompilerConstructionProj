@@ -1,24 +1,39 @@
-%Test Case 2: Syntactically correct test case
-%Following function computes the sum of user defined real numbers
-%The variable d3 maintains the sum of values
-_sumN  input parameter list [int d5cc34]  
-output parameter list[real d3];
-	type int : b5b567;
-	b5b567 <--- 1;
-	d3 <--- 0.00;
-	while ( b5b567 <= d5cc34)
-		read( c3bd);
-		d3 <--- d3 + c3bd;
-		b5b567 <--- b5b567 + 1;
-	endwhile
-	return [d3];
+%Custom Test Case 2: Syntactically correct testcase using records and conditionals
+
+_updatePoint input parameter list[record #point d5, int b5]
+output parameter list[record #point d6];
+	d6.x <--- d5.x + b5;
+	d6.y <--- d5.y + b5;
+	return [d6];
 end
 
 _main
-	type int :b3;
-	type real :c4bd56;
-	b3 <--- 7;
-	[c4bd56]<--- call _sumN with parameters [b3];
-	write(c4bd56);
+	record #point
+		type int : x;
+		type int : y;
+	endrecord
+	type record #point : d5;
+	type record #point : d6;
+	type int : b5;
+	type int : b7;
+	type int : d4;
+	d5.x <--- 5;
+	d5.y <--- 7;
+	b5 <--- 2;
+	[d6] <--- call _updatePoint with parameters [d5, b5];
+	d4 <--- d6.x + d6.y;
+	b7 <--- 1;
+	while(b7<=3)
+		if(d4>0)
+		then
+			d4 <--- d4 + b7;
+		else
+			d4 <--- d4 - b7;
+		endif
+		b7 <--- b7 + 1;
+	endwhile
+	write(d6.x);
+	write(d6.y);
+	write(d4);
 	return;
 end
