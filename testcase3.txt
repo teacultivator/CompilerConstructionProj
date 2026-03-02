@@ -1,4 +1,4 @@
-%Test Case 9: Syntactically incorrect testcase with deliberate grammar errors
+%Custom Test Case 3: Syntactically incorrect testcase with deliberate grammar errors
 %Contains intentional parser-level errors.
 
 _brokenOne input parameter list[int b5, int b6]
