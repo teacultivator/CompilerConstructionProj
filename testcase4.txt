@@ -1,4 +1,4 @@
-%Test Case 10: Syntactically incorrect testcase with malformed declarations
+%Custom Test Case 4: Syntactically incorrect testcase with malformed declarations
 %Contains intentional parser-level errors.
 
 _calc input parameter list[int b5]
