@@ -11,9 +11,6 @@
 #include "parser.h"
 #include "lexer.h"
 
-// ============================================================================
-// HELPER ARRAYS FOR PRINTING (Mapping Enums to Strings)
-// ============================================================================
 const char* tokenStr[] = {
     "TK_ASSIGNOP", "TK_COMMENT", "TK_FIELDID", "TK_ID", "TK_NUM", "TK_RNUM", 
     "TK_FUNID", "TK_RUID", "TK_WITH", "TK_PARAMETERS", "TK_END", "TK_WHILE", 
@@ -43,9 +40,8 @@ const char* nonTermStr[] = {
     "idList", "more_ids", "definetypestmt", "A"
 };
 
-// ============================================================================
-// STACK OPERATIONS
-// ============================================================================
+// Stack operations
+
 Stack createStack() {
     return NULL;
 }
@@ -74,9 +70,7 @@ int isStackEmpty(Stack s) {
     return (s == NULL);
 }
 
-// ============================================================================
-// TREE NODE CREATION
-// ============================================================================
+// Tree node creation
 treeNode* createTreeNode(GrammarSymbol sym, treeNode* parent) {
     treeNode *newNode = (treeNode *)malloc(sizeof(treeNode));
     newNode->isLeafNode = sym.isTerminal;
@@ -88,32 +82,25 @@ treeNode* createTreeNode(GrammarSymbol sym, treeNode* parent) {
     return newNode;
 }
 
-// Helper function to build the tree and push to stack cleanly
 void applyRule(Stack *stack, treeNode *parent, GrammarSymbol rhs[], int rhs_count) {
-    if (rhs_count == 0) return; // Epsilon rule, nothing to push
+    if (rhs_count == 0) return;
 
     treeNode *nodes[20];
 
-    // 1. Create nodes
     for (int i = 0; i < rhs_count; i++) {
         nodes[i] = createTreeNode(rhs[i], parent);
     }
 
-    // 2. Link left-to-right
     parent->firstChild = nodes[0];
     for (int i = 0; i < rhs_count - 1; i++) {
         nodes[i]->nextSibling = nodes[i + 1];
     }
 
-    // 3. Push to stack right-to-left
     for (int i = rhs_count - 1; i >= 0; i--) {
         push(stack, rhs[i], nodes[i]);
     }
 }
 
-// ============================================================================
-// SETUP: FIRST, FOLLOW, AND PARSE TABLE
-// ============================================================================
 void ComputeFirstAndFollowSets(FirstAndFollow *F) {
     for(int i = 0; i < 100; i++) {
         for(int j = 0; j < 100; j++) {
@@ -373,21 +360,15 @@ void createParseTable(FirstAndFollow F, table *T) {
     T->rules[NT_A][TK_UNION] = 95;
 }
 
-// ============================================================================
-// TOKEN FILTER
-// ============================================================================
+ // we let the lexer print the error, but the parser skips it so grammar doesn't crash
 tokenInfo getNextValidToken(twinBuffer B) {
     tokenInfo tk = getNextToken(B);
-    // Let the lexer print the error, but the parser skips it so grammar doesn't crash
     while (tk->tokenType == TK_COMMENT || tk->tokenType == TK_ERROR) {
         tk = getNextToken(B);
     }
     return tk;
 }
 
-// ============================================================================
-// PARSING ENGINE
-// ============================================================================
 parseTree parseInputSourceCode(char *testcaseFile, table T) {
     FILE *fp = fopen(testcaseFile, "r");
     if (fp == NULL) {
@@ -409,29 +390,24 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
     tokenInfo lookahead = getNextValidToken(B);
     int errorFlag = 0;
     int recovering = 0;
-    int previousLineNo = lookahead->lineNo; // Tracks line changes for delayed errors
+    int previousLineNo = lookahead->lineNo; 
 
     while (!isStackEmpty(stack)) {
         stackNode topNode = pop(&stack);
         GrammarSymbol X = topNode.symbol;
         treeNode *currentTreeNode = topNode.treeNodePtr;
 
-        // Condition A: Top of stack is a Terminal
         if (X.isTerminal) {
             if (X.val.term == lookahead->tokenType) {
-                // Match! Save the token directly into the tree node
                 if (currentTreeNode != NULL) {
                     currentTreeNode->token = lookahead;
                 }
-                
                 recovering = 0; 
-                previousLineNo = lookahead->lineNo; // Update tracker on successful match
-
+                previousLineNo = lookahead->lineNo; 
                 if (lookahead->tokenType != TK_EOF) {
                     lookahead = getNextValidToken(B);
                 }
             } else {
-                // Terminal Mismatch Error
                 if (!recovering) {
                     int errLine = (lookahead->lineNo > previousLineNo) ? previousLineNo : lookahead->lineNo;
                     printf("Line %d Error: The token %s for lexeme %s  does not match with the expected token %s\n", 
@@ -441,7 +417,6 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                 errorFlag = 1;
             }
         } 
-        // Condition B: Top of stack is a Non-Terminal
         else {
             int ruleNumber = T.rules[X.val.nonTerm][lookahead->tokenType];
             
@@ -457,26 +432,22 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                     case 38: case 47: case 50: case 53: case 63: case 66: case 89: case 92:
                         applyRule(&stack, currentTreeNode, rhs, 0); 
                         break;
-                    
                     case 1: 
                         rhs[0] = NT(NT_OTHER_FUNCTIONS); 
                         rhs[1] = NT(NT_MAIN_FUNCTION); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 2: 
                         rhs[0] = T(TK_MAIN); 
                         rhs[1] = NT(NT_STMTS); 
                         rhs[2] = T(TK_END); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 3: 
                         rhs[0] = NT(NT_FUNCTION); 
                         rhs[1] = NT(NT_OTHER_FUNCTIONS); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 5: 
                         rhs[0] = T(TK_FUNID); 
                         rhs[1] = NT(NT_INPUT_PAR); 
@@ -486,7 +457,6 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[5] = T(TK_END); 
                         applyRule(&stack, currentTreeNode, rhs, 6); 
                         break;
-                    
                     case 6: 
                         rhs[0] = T(TK_INPUT); 
                         rhs[1] = T(TK_PARAMETER); 
@@ -496,7 +466,6 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[5] = T(TK_SQR); 
                         applyRule(&stack, currentTreeNode, rhs, 6); 
                         break;
-                    
                     case 7: 
                         rhs[0] = T(TK_OUTPUT); 
                         rhs[1] = T(TK_PARAMETER); 
@@ -506,57 +475,47 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[5] = T(TK_SQR); 
                         applyRule(&stack, currentTreeNode, rhs, 6); 
                         break;
-                    
                     case 9: 
                         rhs[0] = NT(NT_DATA_TYPE); 
                         rhs[1] = T(TK_ID); 
                         rhs[2] = NT(NT_REMAINING_LIST); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 10: 
                         rhs[0] = NT(NT_PRIMITIVE_DATATYPE); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 11: 
                         rhs[0] = NT(NT_CONSTRUCTED_DATATYPE); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 12: 
                         rhs[0] = T(TK_INT); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 13: 
                         rhs[0] = T(TK_REAL); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 14: 
                         rhs[0] = T(TK_RECORD); 
                         rhs[1] = T(TK_RUID); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 15: 
                         rhs[0] = T(TK_UNION); 
                         rhs[1] = T(TK_RUID); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 16: 
                         rhs[0] = T(TK_RUID); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 17: 
                         rhs[0] = T(TK_COMMA); 
                         rhs[1] = NT(NT_PARAMETER_LIST); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 19: 
                         rhs[0] = NT(NT_TYPE_DEFINITIONS); 
                         rhs[1] = NT(NT_DECLARATIONS); 
@@ -564,23 +523,19 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[3] = NT(NT_RETURN_STMT); 
                         applyRule(&stack, currentTreeNode, rhs, 4); 
                         break;
-                    
                     case 20: 
                         rhs[0] = NT(NT_ACTUAL_OR_REDEFINED); 
                         rhs[1] = NT(NT_TYPE_DEFINITIONS); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 22: 
                         rhs[0] = NT(NT_TYPE_DEFINITION); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 23: 
                         rhs[0] = NT(NT_DEFINETYPESTMT); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 24: 
                         rhs[0] = T(TK_RECORD); 
                         rhs[1] = T(TK_RUID); 
@@ -588,7 +543,6 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[3] = T(TK_ENDRECORD); 
                         applyRule(&stack, currentTreeNode, rhs, 4); 
                         break;
-                    
                     case 25: 
                         rhs[0] = T(TK_UNION); 
                         rhs[1] = T(TK_RUID); 
@@ -596,14 +550,12 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[3] = T(TK_ENDUNION); 
                         applyRule(&stack, currentTreeNode, rhs, 4); 
                         break;
-                    
                     case 26: 
                         rhs[0] = NT(NT_FIELD_DEFINITION); 
                         rhs[1] = NT(NT_FIELD_DEFINITION); 
                         rhs[2] = NT(NT_MORE_FIELDS); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 27: 
                         rhs[0] = T(TK_TYPE); 
                         rhs[1] = NT(NT_FIELD_TYPE); 
@@ -612,29 +564,24 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[4] = T(TK_SEM); 
                         applyRule(&stack, currentTreeNode, rhs, 5); 
                         break;
-                    
                     case 28: 
                         rhs[0] = NT(NT_PRIMITIVE_DATATYPE); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 29: 
                         rhs[0] = NT(NT_CONSTRUCTED_DATATYPE); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 30: 
                         rhs[0] = NT(NT_FIELD_DEFINITION); 
                         rhs[1] = NT(NT_MORE_FIELDS); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 32: 
                         rhs[0] = NT(NT_DECLARATION); 
                         rhs[1] = NT(NT_DECLARATIONS); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 34: 
                         rhs[0] = T(TK_TYPE); 
                         rhs[1] = NT(NT_DATA_TYPE); 
@@ -644,44 +591,36 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[5] = T(TK_SEM); 
                         applyRule(&stack, currentTreeNode, rhs, 6); 
                         break;
-                    
                     case 35: 
                         rhs[0] = T(TK_COLON); 
                         rhs[1] = T(TK_GLOBAL); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 37: 
                         rhs[0] = NT(NT_STMT); 
                         rhs[1] = NT(NT_OTHER_STMTS); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 39: 
                         rhs[0] = NT(NT_ASSIGNMENT_STMT); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 40: 
                         rhs[0] = NT(NT_ITERATIVE_STMT); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 41: 
                         rhs[0] = NT(NT_CONDITIONAL_STMT); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 42: 
                         rhs[0] = NT(NT_IO_STMT); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 43: 
                         rhs[0] = NT(NT_FUN_CALL_STMT); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 44: 
                         rhs[0] = NT(NT_SINGLE_OR_REC_ID); 
                         rhs[1] = T(TK_ASSIGNOP); 
@@ -689,31 +628,26 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[3] = T(TK_SEM); 
                         applyRule(&stack, currentTreeNode, rhs, 4); 
                         break;
-                    
                     case 45: 
                         rhs[0] = T(TK_ID); 
                         rhs[1] = NT(NT_OPTION_SINGLE_CONSTRUCTED); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 46: 
                         rhs[0] = NT(NT_ONE_EXPANSION); 
                         rhs[1] = NT(NT_MORE_EXPANSIONS); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 48: 
                         rhs[0] = T(TK_DOT); 
                         rhs[1] = T(TK_FIELDID); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 49: 
                         rhs[0] = NT(NT_ONE_EXPANSION); 
                         rhs[1] = NT(NT_MORE_EXPANSIONS); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 51: 
                         rhs[0] = NT(NT_OUTPUT_PARAMETERS); 
                         rhs[1] = T(TK_CALL); 
@@ -724,7 +658,6 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[6] = T(TK_SEM); 
                         applyRule(&stack, currentTreeNode, rhs, 7); 
                         break;
-                    
                     case 52: 
                         rhs[0] = T(TK_SQL); 
                         rhs[1] = NT(NT_ID_LIST); 
@@ -732,14 +665,12 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[3] = T(TK_ASSIGNOP); 
                         applyRule(&stack, currentTreeNode, rhs, 4); 
                         break;
-                    
                     case 54: 
                         rhs[0] = T(TK_SQL); 
                         rhs[1] = NT(NT_ID_LIST); 
                         rhs[2] = T(TK_SQR); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 55: 
                         rhs[0] = T(TK_WHILE); 
                         rhs[1] = T(TK_OP); 
@@ -750,7 +681,6 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[6] = T(TK_ENDWHILE); 
                         applyRule(&stack, currentTreeNode, rhs, 7); 
                         break;
-                    
                     case 56: 
                         rhs[0] = T(TK_IF); 
                         rhs[1] = T(TK_OP); 
@@ -762,7 +692,6 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[7] = NT(NT_ELSE_PART); 
                         applyRule(&stack, currentTreeNode, rhs, 8); 
                         break;
-                    
                     case 57: 
                         rhs[0] = T(TK_ELSE); 
                         rhs[1] = NT(NT_STMT); 
@@ -770,12 +699,10 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[3] = T(TK_ENDIF); 
                         applyRule(&stack, currentTreeNode, rhs, 4); 
                         break;
-                    
                     case 58: 
                         rhs[0] = T(TK_ENDIF); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 59: 
                         rhs[0] = T(TK_READ); 
                         rhs[1] = T(TK_OP); 
@@ -784,7 +711,6 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[4] = T(TK_SEM); 
                         applyRule(&stack, currentTreeNode, rhs, 5); 
                         break;
-                    
                     case 60: 
                         rhs[0] = T(TK_WRITE); 
                         rhs[1] = T(TK_OP); 
@@ -793,65 +719,54 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[4] = T(TK_SEM); 
                         applyRule(&stack, currentTreeNode, rhs, 5); 
                         break;
-                    
                     case 61: 
                         rhs[0] = NT(NT_TERM); 
                         rhs[1] = NT(NT_EXP_PRIME); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 62: 
                         rhs[0] = NT(NT_LOW_PRECEDENCE_OPERATORS); 
                         rhs[1] = NT(NT_TERM); 
                         rhs[2] = NT(NT_EXP_PRIME); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 64: 
                         rhs[0] = NT(NT_FACTOR); 
                         rhs[1] = NT(NT_TERM_PRIME); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 65: 
                         rhs[0] = NT(NT_HIGH_PRECEDENCE_OPERATORS); 
                         rhs[1] = NT(NT_FACTOR); 
                         rhs[2] = NT(NT_TERM_PRIME); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 67: 
                         rhs[0] = T(TK_OP); 
                         rhs[1] = NT(NT_ARITHMETIC_EXPRESSION); 
                         rhs[2] = T(TK_CL); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 68: 
                         rhs[0] = NT(NT_VAR); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 69: 
                         rhs[0] = T(TK_MUL); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 70: 
                         rhs[0] = T(TK_DIV); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 71: 
                         rhs[0] = T(TK_PLUS); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 72: 
                         rhs[0] = T(TK_MINUS); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 73: 
                         rhs[0] = T(TK_OP); 
                         rhs[1] = NT(NT_BOOLEAN_EXPRESSION); 
@@ -862,14 +777,12 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[6] = T(TK_CL); 
                         applyRule(&stack, currentTreeNode, rhs, 7); 
                         break;
-                    
                     case 74: 
                         rhs[0] = NT(NT_VAR); 
                         rhs[1] = NT(NT_RELATIONAL_OP); 
                         rhs[2] = NT(NT_VAR); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 75: 
                         rhs[0] = T(TK_NOT); 
                         rhs[1] = T(TK_OP); 
@@ -877,88 +790,72 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[3] = T(TK_CL); 
                         applyRule(&stack, currentTreeNode, rhs, 4); 
                         break;
-                    
                     case 76: 
                         rhs[0] = NT(NT_SINGLE_OR_REC_ID); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 77: 
                         rhs[0] = T(TK_NUM); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 78: 
                         rhs[0] = T(TK_RNUM); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 79: 
                         rhs[0] = T(TK_AND); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 80: 
                         rhs[0] = T(TK_OR); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 81: 
                         rhs[0] = T(TK_LT); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 82: 
                         rhs[0] = T(TK_LE); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 83: 
                         rhs[0] = T(TK_EQ); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 84: 
                         rhs[0] = T(TK_GT); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 85: 
                         rhs[0] = T(TK_GE); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 86: 
                         rhs[0] = T(TK_NE); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 87: 
                         rhs[0] = T(TK_RETURN); 
                         rhs[1] = NT(NT_OPTIONAL_RETURN); 
                         rhs[2] = T(TK_SEM); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 88: 
                         rhs[0] = T(TK_SQL); 
                         rhs[1] = NT(NT_ID_LIST); 
                         rhs[2] = T(TK_SQR); 
                         applyRule(&stack, currentTreeNode, rhs, 3); 
                         break;
-                    
                     case 90: 
                         rhs[0] = T(TK_ID); 
                         rhs[1] = NT(NT_MORE_IDS); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 91: 
                         rhs[0] = T(TK_COMMA); 
                         rhs[1] = NT(NT_ID_LIST); 
                         applyRule(&stack, currentTreeNode, rhs, 2); 
                         break;
-                    
                     case 93: 
                         rhs[0] = T(TK_DEFINETYPE); 
                         rhs[1] = NT(NT_A); 
@@ -967,17 +864,14 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                         rhs[4] = T(TK_RUID); 
                         applyRule(&stack, currentTreeNode, rhs, 5); 
                         break;
-                    
                     case 94: 
                         rhs[0] = T(TK_RECORD); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     case 95: 
                         rhs[0] = T(TK_UNION); 
                         applyRule(&stack, currentTreeNode, rhs, 1); 
                         break;
-                    
                     default: 
                         break;
                 }
@@ -985,7 +879,6 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                 #undef NT
 
             } else {
-                // Non-Terminal Mismatch Error
                 if (!recovering) {
                     int errLine = (lookahead->lineNo > previousLineNo) ? previousLineNo : lookahead->lineNo;
                     printf("Line %d Error: Invalid token %s encountered with value %s stack top %s\n", 
@@ -994,12 +887,12 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
                 }
                 errorFlag = 1;
 
-                // Panic Mode Check: Is the lookahead in the synchronization set?
+                // Panic Mode Check:
                 TokenType t = lookahead->tokenType;
                 if (t == TK_SEM || t == TK_ENDRECORD || t == TK_ENDUNION || 
                     t == TK_ENDIF || t == TK_ENDWHILE || t == TK_ELSE || 
                     t == TK_CL || t == TK_SQR || t == TK_END || t == TK_EOF) {
-                    // Do nothing - the non-terminal is cleanly popped.
+                    // Stop recovering on sync token
                 } else {
                     push(&stack, X, currentTreeNode);
                     lookahead = getNextValidToken(B);
@@ -1017,21 +910,18 @@ parseTree parseInputSourceCode(char *testcaseFile, table T) {
     return root;
 }
 
-// ============================================================================
-// N-ARY INORDER TREE TRAVERSAL AND PRINTING
-// ============================================================================
+
+// N-ARY inorder tree traversal
 void printParseTree(parseTree PT, char *outfile) {
     if (PT == NULL) return;
 
     FILE *out = fopen(outfile, "a");
     if (!out) return;
 
-    // 1. Visit Leftmost Child
     if (!PT->isLeafNode && PT->firstChild != NULL) {
         printParseTree(PT->firstChild, outfile);
     }
 
-    // 2. Visit Parent Node
     if (PT->isLeafNode && PT->token != NULL) {
         fprintf(out, "%-20s ", PT->token->lexeme);
         fprintf(out, "%-5d ", PT->token->lineNo);
@@ -1045,13 +935,13 @@ void printParseTree(parseTree PT, char *outfile) {
     } else {
         fprintf(out, "%-20s %-5s %-15s %-15s ", "----", "----", "----", "----");
     }
-
+    
     if (PT->parent != NULL) {
         fprintf(out, "%-20s ", nonTermStr[PT->parent->symbol.val.nonTerm]);
     } else {
         fprintf(out, "%-20s ", "ROOT");
     }
-
+    
     if (PT->isLeafNode) {
         fprintf(out, "%-5s %-20s\n", "yes", "----");
     } else {
@@ -1060,7 +950,6 @@ void printParseTree(parseTree PT, char *outfile) {
     
     fclose(out);
 
-    // 3. Visit Remaining Siblings
     if (!PT->isLeafNode && PT->firstChild != NULL) {
         treeNode *sibling = PT->firstChild->nextSibling;
         while (sibling != NULL) {
