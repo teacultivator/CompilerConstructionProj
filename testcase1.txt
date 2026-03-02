@@ -1,4 +1,4 @@
-%Test Case 7: Syntactically correct testcase with iterative computations
+%Custom Test Case 1: Syntactically correct testcase with iterative computations
 
 _sumAndScale input parameter list[int b5, int b6]
 output parameter list[int b3, int b4];
