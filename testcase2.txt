@@ -1,4 +1,4 @@
-%Test Case 8: Syntactically correct testcase using records and conditionals
+%Custom Test Case 2: Syntactically correct testcase using records and conditionals
 
 _updatePoint input parameter list[record #point d5, int b5]
 output parameter list[record #point d6];
