@@ -10,7 +10,7 @@
 
 #include "parserDef.h"
 
-// Function prototypes as per the project specification
+// Function prototypes 
 void ComputeFirstAndFollowSets(FirstAndFollow *F);
 void createParseTable(FirstAndFollow F, table *T);
 parseTree parseInputSourceCode(char *testcaseFile, table T);
